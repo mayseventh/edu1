@@ -30,6 +30,7 @@ podTemplate(label: label, serviceAccount: 'jenkins-admin', namespace: 'edu11',
                   withCredentials([usernamePassword(credentialsId: 'harbor_ci',usernameVariable: 'USERNAME',passwordVariable: 'PASSWORD')]) {
                      sh  """
                      ls -al /etc/containers
+                     echo ${USERNAME} ${PASSWORD}
                      podman login -u ${USERNAME} -p ${PASSWORD} --log-level=debug ${docker_registry}  --tls-verify=false
                      podman build -t ${imageName} --cgroup-manager=cgroupfs --tls-verify=false .
                      podman push ${imageName} --tls-verify=false
