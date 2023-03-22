@@ -1,7 +1,7 @@
 def label = "agent-${UUID.randomUUID().toString()}"
 def gitBranch = 'master'
-def docker_registry = "https://211.252.85.148:40002"  
-def imageName = "211.252.85.148:40002/edu11/edu1"
+def docker_registry = "https://211.43.13.208:40002"  
+def imageName = "211.43.13.208:40002/jenkinsci/edu1"
 
 def TAG = getTag(gitBranch)
 
