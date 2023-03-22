@@ -1,52 +1,56 @@
-def label = "agent-${UUID.randomUUID().toString()}"
-def gitBranch = 'master'
-def docker_registry = "https://211.43.13.208:40002"  
-def imageName = "211.43.13.208:40002/jenkinsci/edu1"
+properties([pipelineTriggers([githubPush()])])
 
-def TAG = getTag(gitBranch)
-
-podTemplate(label: label, serviceAccount: 'jenkins-admin', namespace: 'edu11',
-    containers: [
-        containerTemplate(name: 'podman', image: 'mattermost/podman:1.8.0', ttyEnabled: true, command: 'cat', privileged: true, alwaysPullImage: true)
-        ,containerTemplate(name: 'jnlp', image: 'jenkins/jnlp-slave:latest-jdk11', args: '${computer.jnlpmac} ${computer.name}')
-    ],
-    volumes: [
-        hostPathVolume(hostPath: '/etc/containers' , mountPath: '/var/lib/containers' ),
-        persistentVolumeClaim(mountPath: '/var/jenkins_home', claimName: 'jenkins-edu11-slave-pvc',readOnly: false)
-        ]){    
-    //node("podman-agent") {
-    
-    node(label) {
-       stage('Clone Git Project') {
-            sh "pwd"
-            echo 'Clone'
-            git branch: 'master', credentialsId: 'github_ci', url: 'https://github.com/mayseventh/edu1.git'
-            sh "ls"
-        }
-                             // podman login -u ${USERNAME} -p ${PASSWORD} --log-level=debug ${docker_registry} --tls-verify=false
-
-        stage('Build with Podman') {
-                container('podman') {
-                  withCredentials([usernamePassword(credentialsId: 'harbor_ci',usernameVariable: 'USERNAME',passwordVariable: 'PASSWORD')]) {
-                     sh  """
-                     ls -al /etc/containers
-                     podman login -u ${USERNAME} -p ${PASSWORD} --log-level=debug ${docker_registry}  --tls-verify=false
-                     podman build -t ${imageName} --cgroup-manager=cgroupfs --tls-verify=false .
-                     podman push ${imageName} --tls-verify=false
-                     echo 'TAG ==========> ' ${imageName}
-                     """
-
-                  }
-              }
-        }
-
+pipeline {
+    environment {
+        // Global 변수 선언
+        dockerRepo = "211.43.13.208:40010/edu1"
+        dockerCredentials = 'nexus_ci_edu11'
+        dockerImageVersioned = ""
+        dockerImageLatest = ""
     }
 
-}
+    agent any
 
-def getTag(branchName){     
-    def TAG
-    def DATETIME_TAG = new Date().format('yyyyMMddHHmmss')
-    TAG = "${DATETIME_TAG}"
-    return TAG
-}  
+    stages {
+        /* checkout repo */
+        stage('Checkout SCM') {
+            steps{
+                script{
+                    checkout scm
+                 }
+            }   
+        }
+        
+        stage("Building docker image"){
+            steps{
+                script{
+                    dockerImageVersioned = docker.build dockerRepo //+ ":$BUILD_NUMBER"
+                    dockerImageLatest = docker.build dockerRepo + ":latest"
+                }
+            }
+        }
+        stage("Pushing image to registry"){
+            steps{
+                script{
+                    // if you want to use custom registry, use the first argument, which is blank in this case
+                    docker.withRegistry( 'http://211.43.13.208:40010', dockerCredentials){
+                        dockerImageVersioned.push()
+                        dockerImageLatest.push()
+                    }
+                }
+            }
+        }
+        stage('Cleaning up') {
+            steps {
+                sh "docker rmi $dockerRepo"//:$BUILD_NUMBER"
+            }
+        }
+    }
+
+    /* Cleanup workspace */
+    post {
+       always {
+           deleteDir()
+       }
+   }
+}
