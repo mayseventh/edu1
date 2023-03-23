@@ -32,6 +32,7 @@ podTemplate(label: label, serviceAccount: 'jenkins-admin', namespace: 'edu11',
                      ls -al /etc/containers
                      podman login -u ${USERNAME} -p ${PASSWORD} --log-level=debug ${docker_registry} --tls-verify=false
                      podman build -t ${imageName} --cgroup-manager=cgroupfs --tls-verify=false .
+                     ls -al
                      podman push ${imageName} --tls-verify=false
                      echo 'TAG ==========> ' ${imageName}
                      """
