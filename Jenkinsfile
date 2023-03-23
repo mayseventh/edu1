@@ -1,7 +1,7 @@
 def label = "agent-${UUID.randomUUID().toString()}"
 def gitBranch = 'master'
-def docker_registry = "https://211.43.13.208:40002"  
-def imageName = "211.43.13.208:40002/jenkinsci/edu1"
+def docker_registry = "docker.io"  
+def imageName = "jenkinsci/edu1"
 
 def TAG = getTag(gitBranch)
 
@@ -27,7 +27,7 @@ podTemplate(label: label, serviceAccount: 'jenkins-admin', namespace: 'edu11',
 
         stage('Build with Podman') {
                 container('podman') {
-                  withCredentials([usernamePassword(credentialsId: 'harbor_ci',usernameVariable: 'USERNAME',passwordVariable: 'PASSWORD')]) {
+                  withCredentials([usernamePassword(credentialsId: 'docker_ci',usernameVariable: 'USERNAME',passwordVariable: 'PASSWORD')]) {
                      sh  """
                      ls -al /etc/containers
                      podman login -u ${USERNAME} -p ${PASSWORD} --log-level=debug ${docker_registry} --tls-verify=false
